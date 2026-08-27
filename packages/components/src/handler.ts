@@ -349,6 +349,8 @@ export class CustomChainHandler extends BaseCallbackHandler {
     cachedResponse = true
     chatId: string = ''
     sseStreamer: IServerSideEventStreamer | undefined
+    buffer: string = '' // Buffer to accumulate tokens for filtering
+    insideThinkTag = false // Track if we're inside a thinking tag
 
     constructor(sseStreamer: IServerSideEventStreamer | undefined, chatId: string, skipK?: number, returnSourceDocuments?: boolean) {
         super()
@@ -361,6 +363,8 @@ export class CustomChainHandler extends BaseCallbackHandler {
     handleLLMStart() {
         this.cachedResponse = false
         if (this.skipK > 0) this.skipK -= 1
+        this.buffer = ''
+        this.insideThinkTag = false
     }
 
     handleLLMNewToken(
@@ -375,7 +379,7 @@ export class CustomChainHandler extends BaseCallbackHandler {
             if (!this.isLLMStarted) {
                 this.isLLMStarted = true
                 if (this.sseStreamer) {
-                    this.sseStreamer.streamStartEvent(this.chatId, token)
+                    this.sseStreamer.streamStartEvent(this.chatId, '')
                 }
             }
             if (this.sseStreamer) {
@@ -386,7 +390,36 @@ export class CustomChainHandler extends BaseCallbackHandler {
 
                     // Only stream when token is not empty and not a tool call
                     if (toolCalls.length === 0) {
-                        this.sseStreamer.streamTokenEvent(this.chatId, token)
+                        // Add token to buffer
+                        this.buffer += token
+
+                        // Check for opening thinking tags
+                        if (this.buffer.includes('<think>') || this.buffer.includes('<thinking>')) {
+                            this.insideThinkTag = true
+                        }
+
+                        // Check for closing thinking tags
+                        if (this.buffer.includes('</think>') || this.buffer.includes('</thinking>')) {
+                            // Remove everything from opening to closing tag
+                            this.buffer = this.buffer.replace(/<think>[\s\S]*?<\/think>/g, '')
+                            this.buffer = this.buffer.replace(/<thinking>[\s\S]*?<\/thinking>/g, '')
+                            this.insideThinkTag = false
+
+                            // Stream the cleaned buffer
+                            if (this.buffer) {
+                                this.sseStreamer.streamTokenEvent(this.chatId, this.buffer)
+                                this.buffer = ''
+                            }
+                        } else if (!this.insideThinkTag) {
+                            // If not inside a think tag and no opening tag detected, stream immediately
+                            // But keep a small buffer (last 20 chars) in case opening tag is split across tokens
+                            if (this.buffer.length > 20) {
+                                const toStream = this.buffer.slice(0, -20)
+                                this.buffer = this.buffer.slice(-20)
+                                this.sseStreamer.streamTokenEvent(this.chatId, toStream)
+                            }
+                        }
+                        // If inside think tag, just accumulate in buffer without streaming
                     }
                 }
             }
@@ -394,9 +427,26 @@ export class CustomChainHandler extends BaseCallbackHandler {
     }
 
     handleLLMEnd() {
+        // Flush any remaining buffer (clean it first)
+        if (this.buffer && this.sseStreamer) {
+            const cleaned = this.buffer
+                .replace(/<think>[\s\S]*?<\/think>/g, '')
+                .replace(/<thinking>[\s\S]*?<\/thinking>/g, '')
+                .replace(/<think>[\s\S]*/g, '') // Remove unclosed opening tags
+                .replace(/<thinking>[\s\S]*/g, '')
+
+            if (cleaned) {
+                this.sseStreamer.streamTokenEvent(this.chatId, cleaned)
+            }
+        }
+
         if (this.sseStreamer) {
             this.sseStreamer.streamEndEvent(this.chatId)
         }
+
+        // Reset buffer
+        this.buffer = ''
+        this.insideThinkTag = false
     }
 
     handleChainEnd(outputs: ChainValues, _: string, parentRunId?: string): void | Promise<void> {

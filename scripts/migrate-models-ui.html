@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Model Migration Tool</title>
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+
+            body {
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                min-height: 100vh;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                padding: 20px;
+            }
+
+            .container {
+                background: white;
+                border-radius: 20px;
+                padding: 40px;
+                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+                max-width: 800px;
+                width: 100%;
+            }
+
+            h1 {
+                text-align: center;
+                color: #667eea;
+                margin-bottom: 10px;
+                font-size: 2rem;
+            }
+
+            .subtitle {
+                text-align: center;
+                color: #666;
+                margin-bottom: 40px;
+                font-size: 0.9rem;
+            }
+
+            .form-group {
+                margin-bottom: 25px;
+            }
+
+            label {
+                display: block;
+                margin-bottom: 8px;
+                color: #333;
+                font-weight: 600;
+            }
+
+            select,
+            input {
+                width: 100%;
+                padding: 12px 16px;
+                border: 2px solid #e0e0e0;
+                border-radius: 10px;
+                font-size: 1rem;
+                transition: all 0.3s;
+                background: white;
+            }
+
+            select:focus,
+            input:focus {
+                outline: none;
+                border-color: #667eea;
+                box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            }
+
+            .button-group {
+                display: flex;
+                gap: 15px;
+                margin-top: 30px;
+            }
+
+            button {
+                flex: 1;
+                padding: 15px;
+                border: none;
+                border-radius: 10px;
+                font-size: 1rem;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.3s;
+                position: relative;
+                overflow: hidden;
+            }
+
+            .btn-preview {
+                background: #667eea;
+                color: white;
+            }
+
+            .btn-preview:hover {
+                background: #5568d3;
+                transform: translateY(-2px);
+                box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+            }
+
+            .btn-migrate {
+                background: #48bb78;
+                color: white;
+            }
+
+            .btn-migrate:hover {
+                background: #38a169;
+                transform: translateY(-2px);
+                box-shadow: 0 5px 15px rgba(72, 187, 120, 0.4);
+            }
+
+            .btn-refresh {
+                background: #ed8936;
+                color: white;
+            }
+
+            .btn-refresh:hover {
+                background: #dd6b20;
+                transform: translateY(-2px);
+                box-shadow: 0 5px 15px rgba(237, 137, 54, 0.4);
+            }
+
+            button:disabled {
+                opacity: 0.6;
+                cursor: not-allowed;
+                transform: none !important;
+            }
+
+            .loading {
+                pointer-events: none;
+            }
+
+            .loading::after {
+                content: '';
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                width: 20px;
+                height: 20px;
+                margin: -10px 0 0 -10px;
+                border: 3px solid rgba(255, 255, 255, 0.3);
+                border-top-color: white;
+                border-radius: 50%;
+                animation: spin 0.8s linear infinite;
+            }
+
+            @keyframes spin {
+                to {
+                    transform: rotate(360deg);
+                }
+            }
+
+            .results {
+                margin-top: 30px;
+                padding: 20px;
+                background: #f7fafc;
+                border-radius: 10px;
+                display: none;
+            }
+
+            .results.show {
+                display: block;
+            }
+
+            .result-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 15px;
+                padding-bottom: 15px;
+                border-bottom: 2px solid #e2e8f0;
+            }
+
+            .result-title {
+                font-size: 1.2rem;
+                font-weight: 600;
+                color: #2d3748;
+            }
+
+            .stats {
+                display: flex;
+                gap: 20px;
+                margin-bottom: 20px;
+            }
+
+            .stat {
+                flex: 1;
+                padding: 15px;
+                background: white;
+                border-radius: 8px;
+                text-align: center;
+            }
+
+            .stat-value {
+                font-size: 2rem;
+                font-weight: 700;
+                color: #667eea;
+            }
+
+            .stat-label {
+                font-size: 0.85rem;
+                color: #718096;
+                margin-top: 5px;
+            }
+
+            .chatflow-list {
+                max-height: 400px;
+                overflow-y: auto;
+                background: white;
+                border-radius: 8px;
+                padding: 15px;
+            }
+
+            .chatflow-item {
+                padding: 12px;
+                margin-bottom: 10px;
+                background: #f7fafc;
+                border-radius: 6px;
+                border-left: 4px solid #667eea;
+            }
+
+            .chatflow-item.updated {
+                border-left-color: #48bb78;
+            }
+
+            .chatflow-item.skipped {
+                border-left-color: #ed8936;
+            }
+
+            .chatflow-name {
+                font-weight: 600;
+                color: #2d3748;
+                margin-bottom: 5px;
+            }
+
+            .chatflow-nodes {
+                font-size: 0.85rem;
+                color: #718096;
+            }
+
+            .alert {
+                padding: 15px;
+                border-radius: 8px;
+                margin-bottom: 20px;
+                display: none;
+            }
+
+            .alert.show {
+                display: block;
+            }
+
+            .alert-success {
+                background: #c6f6d5;
+                color: #22543d;
+                border: 1px solid #9ae6b4;
+            }
+
+            .alert-error {
+                background: #fed7d7;
+                color: #742a2a;
+                border: 1px solid #fc8181;
+            }
+
+            .alert-warning {
+                background: #feebc8;
+                color: #7c2d12;
+                border: 1px solid #fbd38d;
+            }
+
+            .swap-icon {
+                text-align: center;
+                margin: 20px 0;
+                font-size: 2rem;
+                color: #667eea;
+            }
+
+            .loading-models {
+                text-align: center;
+                padding: 20px;
+                color: #718096;
+            }
+
+            ::-webkit-scrollbar {
+                width: 8px;
+            }
+
+            ::-webkit-scrollbar-track {
+                background: #f1f1f1;
+                border-radius: 10px;
+            }
+
+            ::-webkit-scrollbar-thumb {
+                background: #667eea;
+                border-radius: 10px;
+            }
+
+            ::-webkit-scrollbar-thumb:hover {
+                background: #5568d3;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>🔄 Model Migration Tool</h1>
+            <p class="subtitle">تحويل الموديلات في Chatflows</p>
+
+            <div id="alert" class="alert"></div>
+
+            <div class="form-group">
+                <label for="fromModel">من الموديل:</label>
+                <select id="fromModel">
+                    <option value="">جاري التحميل...</option>
+                </select>
+            </div>
+
+            <div class="swap-icon">⬇️</div>
+
+            <div class="form-group">
+                <label for="toModel">إلى الموديل:</label>
+                <select id="toModel">
+                    <option value="">جاري التحميل...</option>
+                </select>
+            </div>
+
+            <div class="button-group">
+                <button class="btn-refresh" onclick="loadModels()">🔄 تحديث القائمة</button>
+                <button class="btn-preview" onclick="previewMigration()">👁️ معاينة</button>
+                <button class="btn-migrate" onclick="executeMigration()">✅ تنفيذ</button>
+            </div>
+
+            <div id="results" class="results">
+                <div class="result-header">
+                    <span class="result-title">النتائج</span>
+                </div>
+                <div class="stats">
+                    <div class="stat">
+                        <div class="stat-value" id="totalFound">0</div>
+                        <div class="stat-label">إجمالي</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value" id="migrated">0</div>
+                        <div class="stat-label">تم التحويل</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value" id="skipped">0</div>
+                        <div class="stat-label">تم التخطي</div>
+                    </div>
+                </div>
+                <div id="chatflowList" class="chatflow-list"></div>
+            </div>
+        </div>
+
+        <script>
+            const API_BASE = 'http://localhost:3001/api'
+
+            // Load models on page load
+            window.addEventListener('DOMContentLoaded', loadModels)
+
+            async function loadModels() {
+                const fromSelect = document.getElementById('fromModel')
+                const toSelect = document.getElementById('toModel')
+
+                fromSelect.innerHTML = '<option value="">جاري التحميل...</option>'
+                toSelect.innerHTML = '<option value="">جاري التحميل...</option>'
+
+                try {
+                    const response = await fetch(`${API_BASE}/models`)
+                    const data = await response.json()
+
+                    if (data.success) {
+                        const options = data.models.map((m) => `<option value="${m}">${m}</option>`).join('')
+                        fromSelect.innerHTML = '<option value="">اختر الموديل...</option>' + options
+                        toSelect.innerHTML = '<option value="">اختر الموديل...</option>' + options
+
+                        showAlert('success', `تم تحميل ${data.models.length} موديل`)
+                    } else {
+                        throw new Error(data.error)
+                    }
+                } catch (error) {
+                    showAlert('error', 'فشل تحميل الموديلات: ' + error.message)
+                    fromSelect.innerHTML = '<option value="">خطأ في التحميل</option>'
+                    toSelect.innerHTML = '<option value="">خطأ في التحميل</option>'
+                }
+            }
+
+            async function previewMigration() {
+                const fromModel = document.getElementById('fromModel').value
+                const toModel = document.getElementById('toModel').value
+
+                if (!fromModel || !toModel) {
+                    showAlert('warning', 'الرجاء اختيار الموديل الأصلي والموديل الجديد')
+                    return
+                }
+
+                if (fromModel === toModel) {
+                    showAlert('warning', 'الموديل الأصلي والجديد متطابقان!')
+                    return
+                }
+
+                const button = event.target
+                button.classList.add('loading')
+                button.disabled = true
+
+                try {
+                    const response = await fetch(`${API_BASE}/preview`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ fromModel, toModel })
+                    })
+
+                    const data = await response.json()
+
+                    if (data.success) {
+                        displayResults(data, false)
+                        showAlert('success', `سيتم تحويل ${data.willMigrate} من أصل ${data.totalFound} chatflow`)
+                    } else {
+                        throw new Error(data.error)
+                    }
+                } catch (error) {
+                    showAlert('error', 'فشلت المعاينة: ' + error.message)
+                } finally {
+                    button.classList.remove('loading')
+                    button.disabled = false
+                }
+            }
+
+            async function executeMigration() {
+                const fromModel = document.getElementById('fromModel').value
+                const toModel = document.getElementById('toModel').value
+
+                if (!fromModel || !toModel) {
+                    showAlert('warning', 'الرجاء اختيار الموديل الأصلي والموديل الجديد')
+                    return
+                }
+
+                if (fromModel === toModel) {
+                    showAlert('warning', 'الموديل الأصلي والجديد متطابقان!')
+                    return
+                }
+
+                if (!confirm(`هل أنت متأكد من تحويل جميع الـ chatflows من "${fromModel}" إلى "${toModel}"؟`)) {
+                    return
+                }
+
+                const button = event.target
+                button.classList.add('loading')
+                button.disabled = true
+
+                try {
+                    const response = await fetch(`${API_BASE}/migrate`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ fromModel, toModel })
+                    })
+
+                    const data = await response.json()
+
+                    if (data.success) {
+                        displayResults(data, true)
+                        showAlert('success', `✅ تم تحويل ${data.migrated} chatflow بنجاح!`)
+                    } else {
+                        throw new Error(data.error)
+                    }
+                } catch (error) {
+                    showAlert('error', 'فشل التنفيذ: ' + error.message)
+                } finally {
+                    button.classList.remove('loading')
+                    button.disabled = false
+                }
+            }
+
+            function displayResults(data, isMigration) {
+                document.getElementById('totalFound').textContent = data.totalFound
+                document.getElementById('migrated').textContent = isMigration ? data.migrated : data.willMigrate
+                document.getElementById('skipped').textContent = data.skipped
+
+                const listEl = document.getElementById('chatflowList')
+                listEl.innerHTML = ''
+
+                data.chatflows.forEach((cf) => {
+                    const div = document.createElement('div')
+                    div.className = `chatflow-item ${cf.status || 'updated'}`
+
+                    const nodesInfo = cf.nodes ? `<div class="chatflow-nodes">تم تحديث ${cf.nodes.length} node(s)</div>` : ''
+
+                    div.innerHTML = `
+                    <div class="chatflow-name">${cf.name}</div>
+                    ${nodesInfo}
+                `
+                    listEl.appendChild(div)
+                })
+
+                document.getElementById('results').classList.add('show')
+            }
+
+            function showAlert(type, message) {
+                const alertEl = document.getElementById('alert')
+                alertEl.className = `alert alert-${type} show`
+                alertEl.textContent = message
+
+                setTimeout(() => {
+                    alertEl.classList.remove('show')
+                }, 5000)
+            }
+        </script>
+    </body>
+</html>

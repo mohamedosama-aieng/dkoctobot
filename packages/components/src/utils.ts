@@ -932,6 +932,31 @@ export const flattenObject = (obj: ICommonObject, parentKey?: string) => {
 export const convertBaseMessagetoIMessage = (messages: BaseMessage[]): IMessage[] => {
     const formatmessages: IMessage[] = []
     for (const m of messages) {
+        // Check if _getType function exists, otherwise skip or use fallback
+        if (!m || typeof m._getType !== 'function') {
+            // Skip invalid messages or try to infer type from constructor name
+            if (m && m.constructor) {
+                const constructorName = m.constructor.name.toLowerCase()
+                if (constructorName.includes('human')) {
+                    formatmessages.push({
+                        message: m.content as string,
+                        type: 'userMessage'
+                    })
+                } else if (constructorName.includes('ai')) {
+                    formatmessages.push({
+                        message: m.content as string,
+                        type: 'apiMessage'
+                    })
+                } else if (constructorName.includes('system')) {
+                    formatmessages.push({
+                        message: m.content as string,
+                        type: 'apiMessage'
+                    })
+                }
+            }
+            continue
+        }
+
         if (m._getType() === 'human') {
             formatmessages.push({
                 message: m.content as string,
@@ -1475,15 +1500,12 @@ export const refreshOAuth2Token = async (
                 }
 
                 // Call the refresh API endpoint
-                const refreshResponse = await fetch(
-                    `${refreshUrl}/api/v1/oauth2-credential/refresh/${credentialId}`,
-                    {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        }
+                const refreshResponse = await fetch(`${refreshUrl}/api/v1/oauth2-credential/refresh/${credentialId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
                     }
-                )
+                })
 
                 if (!refreshResponse.ok) {
                     const errorData = await refreshResponse.text()

@@ -240,13 +240,12 @@ class ToolAgent_Agents implements INode {
         output = removeInvalidImageMarkdown(output)
 
         // Claude 3 Opus tends to spit out <thinking>..</thinking> as well, discard that in final output
+        // Grok also uses <think>..</think> tags - remove both
         // https://docs.anthropic.com/en/docs/build-with-claude/tool-use#chain-of-thought
-        const regexPattern: RegExp = /<thinking>[\s\S]*?<\/thinking>/
-        const matches: RegExpMatchArray | null = output.match(regexPattern)
-        if (matches) {
-            for (const match of matches) {
-                output = output.replace(match, '')
-            }
+        const thinkingPatterns: RegExp[] = [/<thinking>[\s\S]*?<\/thinking>/g, /<think>[\s\S]*?<\/think>/g]
+
+        for (const pattern of thinkingPatterns) {
+            output = output.replace(pattern, '')
         }
 
         // Output Supervisor: validate response before sending

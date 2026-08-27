@@ -963,11 +963,52 @@ export class ToolCallingAgentOutputParser extends AgentMultiActionOutputParser {
         throw new Error(`ToolCallingAgentOutputParser can only parse messages.\nPassed input: ${text}`)
     }
 
-    async parseResult(generations: ChatGeneration[]) {
-        if ('message' in generations[0] && isAIMessage(generations[0].message)) {
-            return parseAIMessageToToolAction(generations[0].message)
+    async parseResult(generations: ChatGeneration[] | any[]) {
+        // Safety check - ensure generations[0] exists and has necessary properties
+        if (!generations || !generations[0]) {
+            throw new Error('ToolCallingAgentOutputParser: No generations provided')
         }
-        throw new Error('parseResult on ToolCallingAgentOutputParser only works on ChatGeneration output')
+
+        const generation = generations[0]
+
+        // Handle ChatGeneration with AIMessage
+        if ('message' in generation) {
+            const message = generation.message
+            // Check if message has _getType before calling isAIMessage
+            if (message && typeof message._getType === 'function' && isAIMessage(message)) {
+                return parseAIMessageToToolAction(message)
+            }
+        }
+
+        // Handle direct AIMessage (some models like Grok return this)
+        // Check if generation has _getType before calling isAIMessage
+        if (generation && typeof generation._getType === 'function' && isAIMessage(generation)) {
+            return parseAIMessageToToolAction(generation)
+        }
+
+        // Handle LLMResult or other formats - try to extract text content
+        if ('text' in generation) {
+            const textContent = generation.text
+            // Return as AgentFinish with the text output
+            return {
+                returnValues: { output: textContent },
+                log: typeof textContent === 'string' ? textContent : JSON.stringify(textContent)
+            }
+        }
+
+        // Handle raw string response
+        if (typeof generation === 'string') {
+            return {
+                returnValues: { output: generation },
+                log: generation
+            }
+        }
+
+        throw new Error(
+            `ToolCallingAgentOutputParser: Unsupported generation format. Expected ChatGeneration with AIMessage, got: ${JSON.stringify(
+                generation
+            )}`
+        )
     }
 
     getFormatInstructions(): string {
