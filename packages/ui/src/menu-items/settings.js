@@ -8,7 +8,8 @@ import {
     IconDatabaseExport,
     IconAdjustmentsHorizontal,
     IconUsers,
-    IconTemplate
+    IconTemplate,
+    IconActivity
 } from '@tabler/icons-react'
 
 // constant
@@ -21,7 +22,8 @@ const icons = {
     IconDatabaseExport,
     IconAdjustmentsHorizontal,
     IconUsers,
-    IconTemplate
+    IconTemplate,
+    IconActivity
 }
 
 // ==============================|| SETTINGS MENU ITEMS ||============================== //
@@ -59,6 +61,14 @@ const settings = {
             url: '',
             permission: 'chatflows:config',
             icon: icons.IconAdjustmentsHorizontal
+        },
+        {
+            id: 'crmMonitoring',
+            title: 'CRM Monitoring',
+            type: 'item',
+            url: '',
+            permission: 'chatflows:update',
+            icon: icons.IconActivity
         },
         {
             id: 'saveAsTemplate',

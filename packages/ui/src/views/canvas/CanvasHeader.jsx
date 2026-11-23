@@ -225,6 +225,8 @@ const CanvasHeader = ({ chatflow, isAgentCanvas, isAgentflowV2, handleSaveFlow, 
                 chatflow: chatflow
             })
             setChatflowConfigurationDialogOpen(true)
+        } else if (setting === 'crmMonitoring') {
+            navigate(`/crm-monitoring/${chatflow.id}`)
         } else if (setting === 'duplicateChatflow') {
             try {
                 let flowData = chatflow.flowData
