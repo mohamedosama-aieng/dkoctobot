@@ -59,14 +59,14 @@ export class HttpCrmMonitoringClient implements CrmMonitoringClient {
         private readonly http: HttpTransport = new FetchHttpTransport()
     ) {}
 
-    async sendNote(note: CrmMonitoringNote): Promise<{ duplicate?: boolean; id?: string }> {
+    async sendNote(note: CrmMonitoringNote, apiKey = this.apiKey): Promise<{ duplicate?: boolean; id?: string }> {
         const controller = new AbortController()
         const timer = setTimeout(() => controller.abort(), this.timeoutMs)
         try {
             const response = await this.http.request({
                 method: 'POST',
                 url: `${this.baseUrl.replace(/\/$/, '')}/api/integration/monitoring/note`,
-                headers: { 'content-type': 'application/json', 'x-api-key': this.apiKey, 'idempotency-key': note.eventId },
+                headers: { 'content-type': 'application/json', 'x-api-key': apiKey, 'idempotency-key': note.eventId },
                 body: JSON.stringify(note),
                 signal: controller.signal
             })

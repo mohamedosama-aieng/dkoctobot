@@ -14,6 +14,18 @@ export interface MonitoringEvent {
     policyVersion: number
 }
 
+export interface MonitoringPolicy {
+    clientId: number
+    apiKey: string
+    prompt: string
+    model: string
+    contextMessages: number
+    confidenceThreshold: number
+    fields: Array<{ key: string; displayName?: string; type?: string; required?: boolean }>
+    rules: AlertRule[]
+    version: number
+}
+
 export interface AlertRule {
     id: string
     name: string
@@ -44,6 +56,7 @@ export interface CrmMonitoringNote {
     policyVersion: number
     analysisVersion: string
     sessionId: string
+    chatflowId: string
     note: string
     keys: Record<string, unknown>
     sentiment: 'positive' | 'neutral' | 'negative'
@@ -59,7 +72,7 @@ export interface StructuredExtraction {
 }
 
 export interface LlmExtractor {
-    extract(input: { text: string; event: MonitoringEvent }): Promise<StructuredExtraction>
+    extract(input: { text: string; event: MonitoringEvent; policy: MonitoringPolicy }): Promise<StructuredExtraction>
 }
 
 export interface CrmAlertClient {
@@ -67,5 +80,5 @@ export interface CrmAlertClient {
 }
 
 export interface CrmMonitoringClient {
-    sendNote(note: CrmMonitoringNote): Promise<{ duplicate?: boolean; id?: string }>
+    sendNote(note: CrmMonitoringNote, apiKey?: string): Promise<{ duplicate?: boolean; id?: string }>
 }

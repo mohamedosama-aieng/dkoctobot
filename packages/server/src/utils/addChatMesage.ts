@@ -23,7 +23,9 @@ export const utilAddChatMessage = async (chatMessage: Partial<IChatMessage>, app
             .getRepository(MonitoringPolicy)
             .findOneBy({ chatflowId: dbResponse.chatflowid })
             .then((policy) => {
-                if (policy?.enabled && policy.status === 'published' && policy.frequency === 'every_user_message') {
+                const policyEnabled = policy?.enabled && policy.status === 'published' && policy.frequency === 'every_user_message'
+                const crmMonitoringEnabled = process.env.MONITORING_EVENTS_ALL_USER_MESSAGES === 'true'
+                if (policyEnabled || crmMonitoringEnabled) {
                     return publishMonitoringEvent({
                         chatflowId: dbResponse.chatflowid,
                         chatId: dbResponse.chatId,
@@ -32,7 +34,7 @@ export const utilAddChatMessage = async (chatMessage: Partial<IChatMessage>, app
                         role: 'userMessage',
                         content: dbResponse.content,
                         createdAt: dbResponse.createdDate.toISOString(),
-                        policyVersion: policy.version
+                        policyVersion: policy?.version ?? 0
                     })
                 }
                 return undefined

@@ -14,5 +14,9 @@ export const env = {
     consumerGroup: process.env.MONITORING_CONSUMER_GROUP || 'monitoring-workers',
     consumerName: process.env.MONITORING_CONSUMER_NAME || `monitor-${process.pid}`,
     maxRetries: number('MONITORING_MAX_RETRIES', 3),
-    blockMs: number('MONITORING_STREAM_BLOCK_MS', 2000)
+    blockMs: number('MONITORING_STREAM_BLOCK_MS', 2000),
+    crmBaseUrl: process.env.MONITORING_CRM_BASE_URL || 'http://localhost:4000',
+    workerToken: process.env.MONITORING_WORKER_TOKEN || '',
+    openRouterApiKey: process.env.OPENROUTER_API_KEY || '',
+    openRouterModel: process.env.MONITORING_LLM_MODEL || 'google/gemini-2.5-flash'
 }
