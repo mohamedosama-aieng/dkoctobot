@@ -1,4 +1,4 @@
-import express, { Request, Response } from 'express'
+import { createServer, Server } from 'node:http'
 
 export interface HealthState {
     startedAt: number
@@ -6,15 +6,23 @@ export interface HealthState {
     consumer?: object
 }
 
-export function startServer(port: number, health: HealthState): express.Express {
-    const app = express()
-    app.get('/health', (_request: Request, response: Response) =>
-        response.status(health.redis === 'down' ? 503 : 200).json({
-            status: health.redis === 'down' ? 'degraded' : 'healthy',
+export function startServer(port: number, health: HealthState): Server {
+    const server = createServer((request, response) => {
+        if (request.method !== 'GET' || request.url !== '/health') {
+            response.writeHead(404, { 'content-type': 'application/json' })
+            response.end(JSON.stringify({ error: 'Not found' }))
+            return
+        }
+
+        const unavailable = health.redis === 'down'
+        response.writeHead(unavailable ? 503 : 200, { 'content-type': 'application/json' })
+        response.end(JSON.stringify({
+            status: unavailable ? 'degraded' : 'healthy',
             uptime: Math.floor((Date.now() - health.startedAt) / 1000),
             ...health
-        })
-    )
-    app.listen(port, () => process.stdout.write(`Monitoring service listening on :${port}\n`))
-    return app
+        }))
+    })
+
+    server.listen(port, '0.0.0.0', () => process.stdout.write(`Monitoring service listening on :${port}\n`))
+    return server
 }
