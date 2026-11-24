@@ -21,18 +21,19 @@ async function main(): Promise<void> {
             })
             if (response.status === 404) return null
             if (!response.ok) throw new Error(`CRM policy request failed (${response.status})`)
-            const body = (await response.json()) as { data: Omit<MonitoringPolicy, 'apiKey' | 'rules'> & { api_key: string; alert_rules: MonitoringPolicy['rules'] } }
+            const body = (await response.json()) as { data: Omit<MonitoringPolicy, 'apiKey' | 'rules' | 'llmApiKey'> & { api_key: string; llm_api_key: string; alert_rules: MonitoringPolicy['rules'] } }
             const data = body.data
-            return { ...data, apiKey: data.api_key, rules: data.alert_rules || [], fields: data.fields || [] } as MonitoringPolicy
+            return { ...data, apiKey: data.api_key, llmApiKey: data.llm_api_key, rules: data.alert_rules || [], fields: data.fields || [] } as MonitoringPolicy
         }
     }
     const extractor = new StructuredLlmExtractor({
         async complete(request) {
-            if (!env.openRouterApiKey) throw new Error('OPENROUTER_API_KEY is not configured')
-            const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+            const policy = request.policy
+            if (!policy?.llmApiKey) throw new Error('AI provider API key is not configured for this client')
+            const response = await fetch(`${policy.baseUrl.replace(/\/$/, '')}/chat/completions`, {
                 method: 'POST',
-                headers: { authorization: `Bearer ${env.openRouterApiKey}`, 'content-type': 'application/json' },
-                body: JSON.stringify({ model: env.openRouterModel, messages: [{ role: 'system', content: request.system }, { role: 'user', content: request.user }], response_format: { type: 'json_object' }, temperature: 0.1 })
+                headers: { authorization: `Bearer ${policy.llmApiKey}`, 'content-type': 'application/json' },
+                body: JSON.stringify({ model: policy.model || env.openRouterModel, messages: [{ role: 'system', content: request.system }, { role: 'user', content: request.user }], response_format: { type: 'json_object' }, temperature: 0.1 })
             })
             if (!response.ok) throw new Error(`LLM request failed (${response.status})`)
             const data = (await response.json()) as { choices?: Array<{ message?: { content?: string } }> }

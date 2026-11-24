@@ -1,7 +1,7 @@
 import { LlmExtractor, MonitoringEvent, MonitoringPolicy, StructuredExtraction } from '../domain/contracts'
 
 export interface LlmTransport {
-    complete(request: { system: string; user: string; jsonSchema: Record<string, unknown> }): Promise<unknown>
+    complete(request: { system: string; user: string; jsonSchema: Record<string, unknown>; policy: MonitoringPolicy }): Promise<unknown>
 }
 
 export class StructuredLlmExtractor implements LlmExtractor {
@@ -12,7 +12,8 @@ export class StructuredLlmExtractor implements LlmExtractor {
         const raw = await this.transport.complete({
             system: `${input.policy.prompt || 'Analyze the customer message professionally and concisely.'}\nExtract only these configured fields; never invent values:\n${fields}`,
             user: input.text,
-            jsonSchema: { type: 'object', required: ['summary', 'entities', 'confidence'], properties: { summary: { type: 'string' }, sentiment: { type: 'string' }, entities: { type: 'array' }, confidence: { type: 'number' } } }
+            jsonSchema: { type: 'object', required: ['summary', 'entities', 'confidence'], properties: { summary: { type: 'string' }, sentiment: { type: 'string' }, entities: { type: 'array' }, confidence: { type: 'number' } } },
+            policy: input.policy
         })
         const result = raw as Partial<StructuredExtraction>
         if (typeof result.summary !== 'string' || !Array.isArray(result.entities) || typeof result.confidence !== 'number') {

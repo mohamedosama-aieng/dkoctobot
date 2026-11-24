@@ -17,6 +17,9 @@ export interface MonitoringEvent {
 export interface MonitoringPolicy {
     clientId: number
     apiKey: string
+    provider: string
+    baseUrl: string
+    llmApiKey: string
     prompt: string
     model: string
     contextMessages: number
